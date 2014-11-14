@@ -1,16 +1,16 @@
 /**************************************************************************************************/
 
 /*
- * File: lab3_1B.c
+ * File: finalproject.c
  * Team: Lambda^3
  * Members: Chris Houseman
  *          Randy Martinez
  *          Rachel Powers
  *          Chris Sanford
  *
- * Date: October 31, 2014
+ * Date: November 14, 2014
  *
- * Description: Code that used a potentiometer to control two motors
+ * Description: Code that allows robot to follow line
  *
  */
 
@@ -44,7 +44,8 @@ volatile int prevState=0;
  */
 int main(void) {
 
-    
+ /**********************************************/
+    //variables that store what percentage the motors are turned on to (Motor Control)
     double percent1 = 0;
     double percent2 = 0;
     double oldpercent1=-1;
@@ -53,6 +54,7 @@ int main(void) {
 
 
 /**********************************************/
+    //use timer for PWM (Motor Control)
     T3CONbits.TCS = 0; // sets up to use internal clock 
     T3CONbits.TGATE = 0; 
     T3CONbits.TON = 0;  // Turn timer 3 off
@@ -64,7 +66,7 @@ int main(void) {
 
 /*****************************************************/
     
-
+    //output compare stuff (motor control)
     OC1CONbits.OCM = 6; // Initialize OCx pin low, compare event forces OCx pin high,
     OC1CONbits.OCTSEL = 1; // using timer 3
 
@@ -80,6 +82,7 @@ int main(void) {
     RPOR0bits.RP0R = 18;    //10010 - OC1 (Output Compare 1)
     RPOR1bits.RP2R = 19;    //10011 - OC2 (Output Compare 2)
 /*****************************************************/
+    //pins that control which direction the motors turn (motor control)
     TRISBbits.TRISB11 = 0;
     LATBbits.LATB11 = 1;
     CNPU1bits.CN15PUE = 1;
@@ -88,6 +91,7 @@ int main(void) {
     LATBbits.LATB10 = 1;
     CNPU2bits.CN16PUE = 1;
 /*****************************************************/
+    //determines which state the car is in
 // Configure TRIS register bits for switch 1 input
 	TRISBbits.TRISB5 = 1;
 
@@ -190,18 +194,9 @@ void __attribute__((interrupt,auto_psv)) _CNInterrupt(void)
 
     while (PORTBbits.RB5==0);
     IFS1bits.CNIF = 0;
-    if(state == 0 && prevState !=1){
+    if(state == 0) {
         state = 1;
-        prevState=1;
-
     }
-
-    else if(state == 0 && prevState==1){
-        state = 2;
-        prevState=2;
-    }
-    else {
-        state = 0;
-    }
+        
 }
 
