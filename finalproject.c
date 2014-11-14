@@ -92,12 +92,15 @@ int main(void) {
     CNPU2bits.CN16PUE = 1;
 
 //Sensor (inputs)
+    //sensor1
     TRISBbits.TRISB3 = 1;
     AD1PCFGbits.PCFG5 = 0;
 
+    //sensor 2
     TRISAbits.TRISA1 = 1;
     AD1PCFGbits.PCFG1 = 0;
 
+    //sensor 3
     TRISAbits.TRISA0 = 1;
     AD1PCFGbits.PCFG0 = 0;
 
@@ -186,6 +189,8 @@ int main(void) {
             case 1:
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
+                while (PORTAbits.RA1>4.75);
+                state=0;
                 break;
             //State 2: Drive backwards
             case 2:
