@@ -90,6 +90,17 @@ int main(void) {
     TRISBbits.TRISB10 = 0;
     LATBbits.LATB10 = 1;
     CNPU2bits.CN16PUE = 1;
+
+//Sensor (inputs)
+    TRISBbits.TRISB3 = 1;
+    AD1PCFGbits.PCFG5 = 0;
+
+    TRISAbits.TRISA1 = 1;
+    AD1PCFGbits.PCFG1 = 0;
+
+    TRISAbits.TRISA0 = 1;
+    AD1PCFGbits.PCFG0 = 0;
+
 /*****************************************************/
     //determines which state the car is in
 // Configure TRIS register bits for switch 1 input
@@ -111,7 +122,7 @@ int main(void) {
     AD1CON2 = 0x0;       // Always uses MUX A input multiplexer settings, configured as one 16-word buffer, interrupts at the completion of conversion for each sample/convert sequence, use the channel selected by the CH0SA bits as the MUX A input
     AD1CON3 = 0x0101;      //set the A/D conversion clock period to be 2*Tcy, set the Auto-Sample Time bits to be 1 T_AD, A/D conversion clock derived from system clock
     AD1CON1 = 0x20E4;   // A/D sample auto-start mode set for sampling begins immediately after last conversion completes, SAMP bit is automatically set, Conversion trigger source set to internal counter (auto-convert), data output format is integer, stop in idle mode set to discontinue module operation when device enters idle mode
-    AD1CHS = 5;         // positive input is AN5
+    //AD1CHS = 5;         // positive input is AN5
     AD1CSSL = 0;        // low reference set to 0
 
     AD1CON1bits.ADON = 1; // A/D operating mode set to A/D converter module is operating
