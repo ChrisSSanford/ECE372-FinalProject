@@ -1,4 +1,4 @@
-ECE372FinalProject
+ECE372-FinalProject
 ==================
 
 Repository for FinalProject
