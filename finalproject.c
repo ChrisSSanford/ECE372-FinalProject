@@ -33,59 +33,213 @@ _CONFIG2( IESO_OFF & SOSCSEL_SOSC & WUTSEL_LEG & FNOSC_PRIPLL & FCKSM_CSDCMD & O
 
 // variables that are accessed in multiple functions
 
-volatile int state = 0;
-volatile int prevState=0;
-volatile int leftGood = 1;
-volatile int centerGood = 1;
-volatile int rightGood = 1;
-volatile int calibration = 0;
-volatile int thresh1 = 0;
-volatile int thresh2 = 0;
-volatile int thresh3 = 0;
+volatile int state = 0;                 //changes which case the switch function goes to
+volatile int prevState=0;               //records last state (may not need for this)
+volatile int leftGood = 1;              //flag is set when left sensor is within threshold
+volatile int centerGood = 1;            //flag is set when center sensor is within threshold
+volatile int rightGood = 1;             //flag is set when right sensor is within threshold
+volatile int calibration = 0;           //keeps track of calibration count
+volatile int thresh1 = 0;               //left sensor threshold
+volatile int thresh2 = 0;               //center sensor threshold
+volatile int thresh3 = 0;               //right sensor threshold
 
 // ******************************************************************************************* //
 
 void checkSensors() {
     //check right
-    int AD_value = 0;
-    AD1CHS = 0;         // positive input is AN0
+    int AD_value = 0;       //variable to store A/D buffer val
+    AD1CHS = 0;         // positive input is AN0 (right sensor)
     while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
     IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
     AD_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
-    if (AD_value > thresh3) {
-        rightGood=1;
+    if (AD_value > thresh3) {   //if the right sensor is above the threshold value
+        rightGood=1;            //set rightGood flag high
     }
-    else {
-        rightGood = 0;
+    else {                      //if AD_value is not within threshold
+        rightGood = 0;          //set rightGood flag low
     }
 
     //check center
-    AD_value=0;
-    AD1CHS = 1;         // positive input is AN0
+    AD_value=0;             //reset AD_value to zero
+    AD1CHS = 1;         // positive input is AN1 (center sensor)
     while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
     IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
     AD_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
-    if (AD_value < thresh2) {
-        centerGood=1;
+    if (AD_value < thresh2) {   //if the center sensor is below the threshold value
+        centerGood=1;           //set the centerGood flag high
     }
-    else {
-        centerGood = 0;
+    else {                      //if the center sensor is above threshold
+        centerGood = 0;         //set ceterGood flag low
     }
-    AD_value = 0;
-    TRISBbits.TRISB3 = 1;
-    AD1PCFGbits.PCFG5 = 0;
-    AD1CHS = 5;         // positive input is AN0
+    //check left
+    AD_value = 0;           //reset AD_value
+    TRISBbits.TRISB3 = 1;      //reset the tristate register
+    AD1PCFGbits.PCFG5 = 0;      //reset the AD register
+    AD1CHS = 5;         // positive input is AN5
     while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
     IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
     AD_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
-    if (AD_value > thresh1) {
-        leftGood=1;
+    if (AD_value > thresh1) {   //if left threshold is above threshold
+        leftGood=1;             //set leftGood flag high
     }
-    else {
-        leftGood = 0;
+    else {                      //if left threshold is below threshold
+        leftGood = 0;           //set leftGood flag low
     }
 }
 
+void calibrateSensors() {
+    int ADC_value = 0;
+    double oldADVal=-1;
+    char value[8];
+    //calibration
+    LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
+    LCDPrintString("Set Lim");
+    LCDMoveCursor(1,0);
+    LCDPrintString("Press 1");
+     while (calibration!=2);
+     //calibrate sensor 1's dark value
+       LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
+       LCDPrintString("S1 Blk");
+       AD1CHS = 5;         // positive input is AN0
+       while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+       IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+       ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+       sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+            if(oldADVal!=ADC_value){
+               LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+               LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
+               oldADVal=ADC_value;
+               }
+                   
+       while (calibration != 3){
+           ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+           sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+           if(oldADVal!=ADC_value){
+              LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+              LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
+              oldADVal=ADC_value;
+              }
+       }
+       thresh1=ADC_value;      //darkval
+       //calibrate sensor 1's light value
+       LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
+       LCDPrintString("S1 Lt");
+       while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+       IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+       ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+       sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+           if(oldADVal!=ADC_value){
+                LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+                LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
+                oldADVal=ADC_value;
+                }
+                
+        while(calibration != 4){
+            ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+            sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+            if(oldADVal!=ADC_value){
+              LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+              LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
+              oldADVal=ADC_value;
+              }
+        }
+        thresh1=(thresh1+ADC_value)/2;      //average of light and dark
+        //calibrate sensor 2's dark value
+        LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
+        LCDPrintString("S2 Blk");
+        AD1CHS = 1;         // positive input is AN0
+        while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+        IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+        ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+        sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+        if(oldADVal!=ADC_value){
+              LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+              LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
+              oldADVal=ADC_value;
+              }
+        
+        while (calibration != 5){
+            ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+            sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+            if(oldADVal!=ADC_value){
+              LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+              LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
+              oldADVal=ADC_value;
+              }
+        }
+        thresh2=ADC_value;
+        //calibrate sensor 2's light value
+        LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
+        LCDPrintString("S2 Lt");
+        while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+        IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+        ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+        sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+        while(calibration != 6){
+            ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+            sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+            if(oldADVal!=ADC_value){
+              LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+              LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
+              oldADVal=ADC_value;
+              }
+        }
+        thresh2=(thresh2+ADC_value)/2;      //average of light and dark
+        //calibrate sensor 3's dark value
+        LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
+        LCDPrintString("S3 Blk");
+        AD1CHS = 0;         // positive input is AN0
+        while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+        IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+        ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+        sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+        if(oldADVal!=ADC_value){
+              LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+              LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
+              oldADVal=ADC_value;
+              }
+        while(calibration != 7) {
+            ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+            sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+            if(oldADVal!=ADC_value){
+              LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+              LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
+              oldADVal=ADC_value;
+              }
+        }
+        thresh3=ADC_value;
+        //calibrate sensor 3's light value
+        LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
+        LCDPrintString("S3 Lt");
+        while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+        IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+        ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+        sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+        if(oldADVal!=ADC_value){
+              LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+              LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
+              oldADVal=ADC_value;
+              }
+         while(calibration != 8) {
+             ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+             sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+             if(oldADVal!=ADC_value){
+              LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+              LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
+              oldADVal=ADC_value;
+              }
+         }
+         thresh3=(thresh3+ADC_value)/2;
+         //report calibration completion to user
+         LCDClear();
+         LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
+         LCDPrintString("Set Lim");
+         LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+         LCDPrintString("Done");
+         DelayUs(5000000);
+         LCDInitialize();
+         state = 1;
+}
 
 /*
  * 
@@ -180,17 +334,6 @@ int main(void) {
 
     while(1)
     {
-        while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
-        IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
-        ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
-        sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
-        if(oldADVal!=ADC_value){
-            LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
-            LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
-            oldADVal=ADC_value;
-        }
-        //AD_value = (ADC_value * 3.3)/1024;  // converts the binary value of the voltage to the analog value by multiplying by the maximum voltage and dividing by 2^n = 2^10, then stores it in AD_value
-
 // Motor switching
         switch(state){
 
@@ -200,6 +343,11 @@ int main(void) {
                 LCDPrintString("State 0");
                 LATBbits.LATB10=0;
                 LATBbits.LATB11=0;
+                while(calibration<1);
+                if (calibration < 8){
+                    calibrateSensors();
+                }
+                state=1;
                 break;
             //State 1: Drive forward
             case 1:
@@ -221,26 +369,42 @@ int main(void) {
                 LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
                 LCDPrintString("State 2");
                 //AD1CHS = 1;         // input is center sensor
-                if ((rightGood==1)&&(centerGood==0)&&(leftGood==0)) { //turn left
+                if ((leftGood==0)&&(centerGood==0)&&(rightGood==0)) {
+                    state = 0;
+                }
+                else if ((leftGood==0)&&(centerGood==0)&&(rightGood==1)) { //veer left
                     state = 3;
                 }
-                else if ((rightGood==1)&&(centerGood==0)&&(leftGood==1)){ //also turn right
-                    state = 3;
+                else if ((leftGood==0)&&(centerGood==1)&&(rightGood==0)) { //end of track
+                    state = 0;
                 }
-                else if ((rightGood==0)&&(centerGood==0)&&(leftGood==1)) { //turn right
+                else if ((leftGood==0)&&(centerGood==1)&&(rightGood==1)) { //intersection
+                    state = 6;
+                }
+                else if ((leftGood==1)&&(centerGood==0)&&(rightGood==0)) { //veer right
                     state = 4;
                 }
-                else {
-                    state = 1;
+                else if ((leftGood==1)&&(centerGood==0)&&(rightGood==1)) { //weird glitch
+                    state == 0;
+                }
+                else if ((leftGood==1)&&(centerGood==1)&&(rightGood==0)) {  //intersection
+                    state == 5;
+                }
+                else if ((leftGood==1)&&(centerGood==1)&&(rightGood==1)) {  //should not get here
+                    state == 1;
+                }
+                else {                                                      //should not get here
+                    state = 0;
                 }
                 break;
+
             case 3: //car off track
                 LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
                 LCDPrintString("State 3");
                 while (centerGood!=1){
                     checkSensors();
-                    OC2RS = PR3/2;
                     OC1RS = 0;
+                    OC2RS = PR3*.667;
                 }
                 state = 1;
                 break;
@@ -250,112 +414,31 @@ int main(void) {
                 LCDPrintString("State 4");
                 while (centerGood!=1){
                     checkSensors();
+                    OC1RS = PR3*.667;
                     OC2RS = 0;
-                    OC1RS = PR3/2;
                 }
                 state = 1;
                 break;
-            case 20:    //calibration
-                LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-                LCDPrintString("Set Lim");
-                LCDMoveCursor(1,0);
-                LCDPrintString("Press 1");
-                if (calibration==1) {
-                   LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-                   LCDPrintString("S1 Blk");
-                   AD1CHS = 5;         // positive input is AN0
-                   while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
-                   IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
-                   ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
-                   sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
-                   if(oldADVal!=ADC_value){
-                        LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
-                        LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
-                        oldADVal=ADC_value;
-                        }
-                    }
-                if (calibration == 2){
-                    thresh1=ADC_value;      //darkval
-                    LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-                    LCDPrintString("S1 Lt");
-                    while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
-                    IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
-                    ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
-                    sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
-                    if(oldADVal!=ADC_value){
-                        LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
-                        LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
-                        oldADVal=ADC_value;
-                        }
-                    }
-                if (calibration == 3) {
-                    thresh1=(thresh1+ADC_value)/2;      //average of light and dark
-                    LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-                    LCDPrintString("S2 Blk");
-                    AD1CHS = 1;         // positive input is AN0
-                    while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
-                    IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
-                    ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
-                    sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
-                    if(oldADVal!=ADC_value){
-                        LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
-                        LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
-                        oldADVal=ADC_value;
-                        }
-                    }
-                if (calibration == 4) {
-                    thresh2=ADC_value;
-                    LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-                    LCDPrintString("S2 Lt");
-                    while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
-                    IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
-                    ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
-                    sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
-                    if(oldADVal!=ADC_value){
-                        LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
-                        LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
-                        oldADVal=ADC_value;
-                        }
-                    }
-                if (calibration == 5) {
-                    thresh2=(thresh2+ADC_value)/2;      //average of light and dark
-                    LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-                    LCDPrintString("S3 Blk");
-                    AD1CHS = 0;         // positive input is AN0
-                    while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
-                    IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
-                    ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
-                    sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
-                    if(oldADVal!=ADC_value){
-                        LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
-                        LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
-                        oldADVal=ADC_value;
-                        }
-                    }
-                if (calibration == 6) {
-                    thresh3=ADC_value;
-                    LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-                    LCDPrintString("S3 Lt");
-                    while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
-                    IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
-                    ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
-                    sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
-                    if(oldADVal!=ADC_value){
-                        LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
-                        LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
-                        oldADVal=ADC_value;
-                        }
-                    }
-                if (calibration == 7) {
-                    thresh3=(thresh3+ADC_value)/2;
-                    LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-                    LCDPrintString("Set Lim");
-                    LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
-                    LCDPrintString("Done");
-                    DelayUs(1000);
-                    LCDInitialize();
-                    state = 1;
+            case 5: //turn right
+                LCDMoveCursor(0,0);
+                LCDPrintString("State 5");
+                while (rightGood!=1) {
+                    checkSensors();
+                    OC1RS=0;
+                    OC2RS=PR3*.667;
                 }
+                state = 1;
+                break;
+
+            case 6: //turn left
+                LCDMoveCursor(0,0);
+                LCDPrintString("State 6");
+                while (leftGood!=1) {
+                    OC1RS=PR3*.667;
+                    OC2RS=0;
+                    checkSensors();
+                }
+                state = 1;
                 break;
         }
 
@@ -370,14 +453,7 @@ void __attribute__((interrupt,auto_psv)) _CNInterrupt(void)
 
     while (PORTBbits.RB5==0);
     IFS1bits.CNIF = 0;
-    if((state == 0)&&(calibration==7)) {
-        state = 1;
-    }
-    else if ((state == 0)&&(calibration == 0)) {
-        calibration=1;
-        state = 20; //calibration state is last case
-    }
-    else if (state == 20) {
+    if(state == 0) {
         calibration=calibration+1;
     }
         
