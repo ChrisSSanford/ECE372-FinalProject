@@ -39,9 +39,9 @@ volatile int leftGood = 1;              //flag is set when left sensor is within
 volatile int centerGood = 1;            //flag is set when center sensor is within threshold
 volatile int rightGood = 1;             //flag is set when right sensor is within threshold
 volatile int calibration = 0;           //keeps track of calibration count
-volatile int thresh1 = 500;               //left sensor threshold
+volatile int thresh1 = 275;               //left sensor threshold -was 500
 volatile int thresh2 = 1000;               //center sensor threshold
-volatile int thresh3 = 800;               //right sensor threshold
+volatile int thresh3 = 475;               //right sensor threshold - was 800
 
 // ******************************************************************************************* //
 
@@ -345,6 +345,7 @@ int main(void) {
 //                if (calibration < 8){
 //                    calibrateSensors();
 //                }
+                LCDClear();   // (ch) added to see if it is always going back to 'glitch' state
                 state=1;
                 break;
             //State 1: Drive forward
@@ -360,6 +361,7 @@ int main(void) {
                 while ((rightGood==1)&&(centerGood==1)&&(leftGood==1)){
                     checkSensors();
                 }
+                LCDClear();   // (ch) added to see if it is always going back to 'glitch' state
                 state=2;
                 break;
             //State 2: check problems
@@ -370,16 +372,16 @@ int main(void) {
                 OC2RS = 0;
                 //AD1CHS = 1;         // input is center sensor
                 if ((leftGood==0)&&(centerGood==0)&&(rightGood==0)) {
-//                    LCDMoveCursor(1,0);
-//                    LCDPrintString("LB CB RB");
+//                   LCDMoveCursor(1,0);
+//                   LCDPrintString("LB CB RB");
                     state = 0;
                 }
                 else if ((leftGood==0)&&(centerGood==0)&&(rightGood==1)) { //veer left
                     state = 3;
                 }
                 else if ((leftGood==0)&&(centerGood==1)&&(rightGood==0)) { //end of track
-//                    LCDMoveCursor(1,0);
-//                    LCDPrintString("LB CG RB");
+                    LCDMoveCursor(1,0);
+                    LCDPrintString("LB CG RB"); // printed this
                     state = 0;
                 }
                 else if ((leftGood==0)&&(centerGood==1)&&(rightGood==1)) { //intersection
@@ -389,8 +391,8 @@ int main(void) {
                     state = 4;
                 }
                 else if ((leftGood==1)&&(centerGood==0)&&(rightGood==1)) { //weird glitch
-//                    LCDMoveCursor(1,0);
-//                    LCDPrintString("LG CB RG");
+//                   LCDMoveCursor(1,0);
+//                   LCDPrintString("LG CB RG");
                     state == 0;
                 }
                 else if ((leftGood==1)&&(centerGood==1)&&(rightGood==0)) {  //intersection
