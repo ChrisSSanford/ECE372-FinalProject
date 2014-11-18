@@ -49,9 +49,11 @@ void checkSensors() {
     //check right
     int AD_value = 0;       //variable to store A/D buffer val
     AD1CHS = 0;         // positive input is AN0 (right sensor)
-    while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
-    IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
-    AD_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+    while (AD_value==0) {
+        while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+        IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+        AD_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+    }
     if (AD_value > thresh3) {   //if the right sensor is above the threshold value
         rightGood=1;            //set rightGood flag high
     }
@@ -62,9 +64,11 @@ void checkSensors() {
     //check center
     AD_value=0;             //reset AD_value to zero
     AD1CHS = 1;         // positive input is AN1 (center sensor)
-    while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
-    IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
-    AD_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+    while (AD_value==0) {
+        while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+        IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+        AD_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+    }  // wait while the A/D 1 interrupt flag is low    // clear the A/D 1 interrupt flag
     if (AD_value < thresh2) {   //if the center sensor is below the threshold value
         centerGood=1;           //set the centerGood flag high
     }
@@ -74,9 +78,11 @@ void checkSensors() {
     //check left
     AD_value = 0;           //reset AD_value
     AD1CHS = 3;         // positive input is AN5
-    while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
-    IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
-    AD_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+    while (AD_value==0) {
+        while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+        IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+        AD_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+    }
     if (AD_value > thresh1) {   //if left threshold is above threshold
         leftGood=1;             //set leftGood flag high
     }
