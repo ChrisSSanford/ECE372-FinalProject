@@ -39,9 +39,9 @@ volatile int leftGood = 1;              //flag is set when left sensor is within
 volatile int centerGood = 1;            //flag is set when center sensor is within threshold
 volatile int rightGood = 1;             //flag is set when right sensor is within threshold
 volatile int calibration = 0;           //keeps track of calibration count
-volatile int thresh1 = 0;               //left sensor threshold
-volatile int thresh2 = 0;               //center sensor threshold
-volatile int thresh3 = 0;               //right sensor threshold
+volatile int thresh1 = 500;               //left sensor threshold
+volatile int thresh2 = 1000;               //center sensor threshold
+volatile int thresh3 = 800;               //right sensor threshold
 
 // ******************************************************************************************* //
 
@@ -73,9 +73,7 @@ void checkSensors() {
     }
     //check left
     AD_value = 0;           //reset AD_value
-    TRISBbits.TRISB3 = 1;      //reset the tristate register
-    AD1PCFGbits.PCFG5 = 0;      //reset the AD register
-    AD1CHS = 5;         // positive input is AN5
+    AD1CHS = 3;         // positive input is AN5
     while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
     IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
     AD_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
@@ -93,14 +91,14 @@ void calibrateSensors() {
     char value[8];
     //calibration
     LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-    LCDPrintString("Set Lim");
+    LCDPrintString("Set Lim ");
     LCDMoveCursor(1,0);
-    LCDPrintString("Press 1");
+    LCDPrintString("Press 1 ");
      while (calibration!=2);
      //calibrate sensor 1's dark value
        LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-       LCDPrintString("S1 Blk");
-       AD1CHS = 5;         // positive input is AN0
+       LCDPrintString("S1 Track");
+       AD1CHS = 3;         // positive input is AN0
        while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
        IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
        ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
@@ -123,7 +121,7 @@ void calibrateSensors() {
        thresh1=ADC_value;      //darkval
        //calibrate sensor 1's light value
        LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-       LCDPrintString("S1 Lt");
+       LCDPrintString("S1 Floor");
        while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
        IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
        ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
@@ -146,7 +144,7 @@ void calibrateSensors() {
         thresh1=(thresh1+ADC_value)/2;      //average of light and dark
         //calibrate sensor 2's dark value
         LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-        LCDPrintString("S2 Blk");
+        LCDPrintString("S2 Track");
         AD1CHS = 1;         // positive input is AN0
         while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
         IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
@@ -170,7 +168,7 @@ void calibrateSensors() {
         thresh2=ADC_value;
         //calibrate sensor 2's light value
         LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-        LCDPrintString("S2 Lt");
+        LCDPrintString("S2 Floor");
         while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
         IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
         ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
@@ -187,7 +185,7 @@ void calibrateSensors() {
         thresh2=(thresh2+ADC_value)/2;      //average of light and dark
         //calibrate sensor 3's dark value
         LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-        LCDPrintString("S3 Blk");
+        LCDPrintString("S3 Track");
         AD1CHS = 0;         // positive input is AN0
         while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
         IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
@@ -210,7 +208,7 @@ void calibrateSensors() {
         thresh3=ADC_value;
         //calibrate sensor 3's light value
         LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-        LCDPrintString("S3 Lt");
+        LCDPrintString("S3 Floor");
         while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
         IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
         ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
@@ -236,7 +234,7 @@ void calibrateSensors() {
          LCDPrintString("Set Lim");
          LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
          LCDPrintString("Done");
-         DelayUs(5000000);
+         DelayUs(10000000);
          LCDInitialize();
          state = 1;
 }
@@ -293,8 +291,8 @@ int main(void) {
 
 //Sensor (inputs)
     //sensor left 3
-    TRISBbits.TRISB3 = 1;
-    AD1PCFGbits.PCFG5 = 0;
+    TRISBbits.TRISB1 = 1;
+    AD1PCFGbits.PCFG3 = 0;
 
     //sensor center 2
     TRISAbits.TRISA1 = 1;
@@ -325,7 +323,7 @@ int main(void) {
     AD1CON2 = 0x0;       // Always uses MUX A input multiplexer settings, configured as one 16-word buffer, interrupts at the completion of conversion for each sample/convert sequence, use the channel selected by the CH0SA bits as the MUX A input
     AD1CON3 = 0x0101;      //set the A/D conversion clock period to be 2*Tcy, set the Auto-Sample Time bits to be 1 T_AD, A/D conversion clock derived from system clock
     AD1CON1 = 0x20E4;   // A/D sample auto-start mode set for sampling begins immediately after last conversion completes, SAMP bit is automatically set, Conversion trigger source set to internal counter (auto-convert), data output format is integer, stop in idle mode set to discontinue module operation when device enters idle mode
-    AD1CHS = 5;         // positive input is AN0
+    AD1CHS = 1;         // positive input is AN0
     AD1CSSL = 0;        // low reference set to 0
 
     AD1CON1bits.ADON = 1; // A/D operating mode set to A/D converter module is operating
@@ -344,9 +342,9 @@ int main(void) {
                 LATBbits.LATB10=0;
                 LATBbits.LATB11=0;
                 while(calibration<1);
-                if (calibration < 8){
-                    calibrateSensors();
-                }
+//                if (calibration < 8){
+//                    calibrateSensors();
+//                }
                 state=1;
                 break;
             //State 1: Drive forward
@@ -364,18 +362,24 @@ int main(void) {
                 }
                 state=2;
                 break;
-            //State 2: Drive backwards
+            //State 2: check problems
             case 2:
                 LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
                 LCDPrintString("State 2");
+                OC1RS = 0;
+                OC2RS = 0;
                 //AD1CHS = 1;         // input is center sensor
                 if ((leftGood==0)&&(centerGood==0)&&(rightGood==0)) {
+//                    LCDMoveCursor(1,0);
+//                    LCDPrintString("LB CB RB");
                     state = 0;
                 }
                 else if ((leftGood==0)&&(centerGood==0)&&(rightGood==1)) { //veer left
                     state = 3;
                 }
                 else if ((leftGood==0)&&(centerGood==1)&&(rightGood==0)) { //end of track
+//                    LCDMoveCursor(1,0);
+//                    LCDPrintString("LB CG RB");
                     state = 0;
                 }
                 else if ((leftGood==0)&&(centerGood==1)&&(rightGood==1)) { //intersection
@@ -385,6 +389,8 @@ int main(void) {
                     state = 4;
                 }
                 else if ((leftGood==1)&&(centerGood==0)&&(rightGood==1)) { //weird glitch
+//                    LCDMoveCursor(1,0);
+//                    LCDPrintString("LG CB RG");
                     state == 0;
                 }
                 else if ((leftGood==1)&&(centerGood==1)&&(rightGood==0)) {  //intersection
@@ -394,44 +400,46 @@ int main(void) {
                     state == 1;
                 }
                 else {                                                      //should not get here
+//                   LCDMoveCursor(1,0);
+//                   LCDPrintString("ELSE    ");
                     state = 0;
                 }
                 break;
 
             case 3: //car off track
-                LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
+                LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
                 LCDPrintString("State 3");
-                while (centerGood!=1){
-                    checkSensors();
+                while ((centerGood!=1)&&(leftGood!=1)){
                     OC1RS = 0;
                     OC2RS = PR3*.667;
+                    checkSensors();
                 }
                 state = 1;
                 break;
 
             case 4: //car off track
-                LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
+                LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
                 LCDPrintString("State 4");
                 while (centerGood!=1){
-                    checkSensors();
                     OC1RS = PR3*.667;
                     OC2RS = 0;
+                    checkSensors();
                 }
                 state = 1;
                 break;
             case 5: //turn right
-                LCDMoveCursor(0,0);
+                LCDMoveCursor(1,0);
                 LCDPrintString("State 5");
                 while (rightGood!=1) {
-                    checkSensors();
                     OC1RS=0;
                     OC2RS=PR3*.667;
+                    checkSensors();
                 }
                 state = 1;
                 break;
 
             case 6: //turn left
-                LCDMoveCursor(0,0);
+                LCDMoveCursor(1,0);
                 LCDPrintString("State 6");
                 while (leftGood!=1) {
                     OC1RS=PR3*.667;
@@ -455,6 +463,9 @@ void __attribute__((interrupt,auto_psv)) _CNInterrupt(void)
     IFS1bits.CNIF = 0;
     if(state == 0) {
         calibration=calibration+1;
+    }
+    if (state ==6) {
+        state=0;
     }
         
 }
