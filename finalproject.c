@@ -165,8 +165,8 @@ int main(void) {
             case 1:
 //                LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
 //                LCDPrintString("State 1");
-                OC1RS = PR3*.667;
-                OC2RS = PR3*.667;
+                OC1RS = PR3*.67;
+                OC2RS = PR3*.67;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
                 AD1CHS = 1;
@@ -182,7 +182,7 @@ int main(void) {
                      }
                 AD1CON1bits.ADON = 0;
                 
-                if (ADC_value>100) {
+                if (ADC_value>60) {
                     state = 2;
                 }
                 break;
@@ -190,9 +190,9 @@ int main(void) {
             case 2:
                 LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
                 LCDPrintString("State 2");
-                OC1RS = 0;
-                OC2RS = 0;
-                LATBbits.LATB10=1;
+                OC1RS = PR3*.67;
+                OC2RS = PR3*.67;
+                LATBbits.LATB10=0;
                 LATBbits.LATB11=0;
                 AD1CHS = 0;
                 AD1CON1bits.ADON = 1;
@@ -218,11 +218,14 @@ int main(void) {
                      oldLeftVal=ADC_left;
                      }
                 AD1CON1bits.ADON = 0;
-                if ((ADC_right < 70) && (ADC_left > 30)) {
+                if ((ADC_right < 90) && (ADC_left > 45)) {
                     state = 4;
                 }
-                else if ((ADC_right > 70) && (ADC_left < 30)) {
+                else if ((ADC_right > 90) && (ADC_left < 45)) {
                     state =  5;
+                }
+                else {
+                    state = 1;
                 }
                 break;
             //State 2: Drive backwards
@@ -241,20 +244,23 @@ int main(void) {
             case 4: //car off track
                 LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
                 LCDPrintString("State 4");
-                OC1RS = 0;
-                OC2RS = PR3*.5;
+                OC1RS = PR3*.65;
+                OC2RS = 0;
+                LATBbits.LATB10=1;
+                LATBbits.LATB11=0;
                 AD1CHS = 0;
                 AD1CON1bits.ADON = 1;
-                if (ADC_right<70) {
-                    while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
-                    IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
-                    ADC_right = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
-                    sprintf(value1, "%6d", ADC_right); // formats value in ADC_value as a 6 character string and stores in in the value character array
-                        if(oldRightVal!=ADC_right){
-                            LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
-                            LCDPrintString(value1);              // sends value to the LCD print function to display it on the LCD screen
-                            oldRightVal=ADC_right;
-                        }
+                IFS0bits.AD1IF = 0;
+                while(!IFS0bits.AD1IF);
+                IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+                ADC_right = ADC1BUF0;
+                sprintf(value2, "%6d", ADC_right); // formats value in ADC_value as a 6 character string and stores in in the value character array
+                  if(oldRightVal!=ADC_right){
+                     LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+                     LCDPrintString(value2);              // sends value to the LCD print function to display it on the LCD screen
+                     oldRightVal=ADC_right;
+                     }
+                if (ADC_right<90) {
                     state = 4;
                 }
                 else {
@@ -265,20 +271,22 @@ int main(void) {
             case 5: //car off track
                 LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
                 LCDPrintString("State 5");
-                OC1RS = PR3*.5;
-                OC2RS = 0;
+                OC1RS = 0;
+                OC2RS = PR3*.65;
+                LATBbits.LATB10=1;
+                LATBbits.LATB11=0;
                 AD1CHS = 4;
                 AD1CON1bits.ADON = 1;
-                if (ADC_left<30) {
-                    while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
-                    IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
-                    ADC_left = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
-                    sprintf(value2, "%6d", ADC_left); // formats value in ADC_value as a 6 character string and stores in in the value character array
-                        if(oldLeftVal!=ADC_left){
-                            LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
-                            LCDPrintString(value2);              // sends value to the LCD print function to display it on the LCD screen
-                            oldLeftVal=ADC_left;
-                        }
+                while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+                IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+                ADC_left = ADC1BUF0;
+                sprintf(value1, "%6d", ADC_left); // formats value in ADC_value as a 6 character string and stores in in the value character array
+                  if(oldLeftVal!=ADC_left){
+                     LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+                     LCDPrintString(value1);              // sends value to the LCD print function to display it on the LCD screen
+                     oldLeftVal=ADC_left;
+                     }
+                if (ADC_left<45) {
                     state = 5;
                 }
                 else {
