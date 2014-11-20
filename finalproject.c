@@ -50,6 +50,7 @@ int main(void) {
     double percent2 = 0;
     double oldpercent1=-1;
     double oldpercent2=-1;
+    int oldADVal=-1;
     int oldRightVal=-1;
     int oldLeftVal=-1;
 
@@ -121,7 +122,7 @@ int main(void) {
     int ADC_right;
     char value1[8];      //  character array to store the values to be printed to the LCD
     char value2[8];      //  character array to store the values to be printed to the LCD
-    double AD_value;    // variable to store the calculated value of the voltage
+    char value[8];    // variable to store the calculated value of the voltage
 
     LCDInitialize();  // initialize the LCD display
 
@@ -138,15 +139,7 @@ int main(void) {
 
     while(1)
     {
-//        while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
-//        IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
-//        ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
-//        sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
-//        if(oldADVal!=ADC_value){
-//            LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
-//            LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
-//            oldADVal=ADC_value;
-//        }
+
         //AD_value = (ADC_value * 3.3)/1024;  // converts the binary value of the voltage to the analog value by multiplying by the maximum voltage and dividing by 2^n = 2^10, then stores it in AD_value
 
 // Motor switching
@@ -158,15 +151,103 @@ int main(void) {
                 LCDPrintString("State 0");
                 LATBbits.LATB10=0;
                 LATBbits.LATB11=0;
+                AD1CHS = 4;
+                AD1CON1bits.ADON = 1;// positive input is AN5
+                while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+                IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+                ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+                 sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+                if(oldADVal!=ADC_value){
+                   LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+                   LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
+                   oldADVal=ADC_value;
+                    }
+                 AD1CON1bits.ADON = 0;
                 break;
-            //State 1: Drive forward
+            
+            //State 2: Drive backwards
             case 1:
-//                LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-//                LCDPrintString("State 1");
-//                OC1RS = PR3;
-//                OC2RS = PR3;
+                LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
+                LCDPrintString("State 1");
+                ADC_value=0;
+                AD1CHS = 1;         // input is center sensor
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
+                OC1RS = PR3*.75;
+                OC2RS = PR3*.75;
+                AD1CON1bits.ADON = 1;
+                while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+                IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+                ADC_value=ADC1BUF0;
+                sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+                        if(oldADVal!=ADC_value){
+                            LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+                            LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
+                            oldADVal=ADC_value;
+                        }
+                if (ADC_value>90) {    //car off track
+                    state = 5;
+                }
+                AD1CON1bits.ADON = 0;
+                break;
+            case 3: //car off track
+                LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
+                LCDPrintString("State 3");
+                ADC_value = 0;
+                OC1RS = 0;
+                OC2RS = PR3*.667;
+                AD1CHS = 1;
+                AD1CON1bits.ADON = 1;
+                while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+                    IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+                    ADC_value = ADC1BUF0;
+                while (ADC_value>90) {
+                    while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+                    IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+                    ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+                    sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+                        if(oldADVal!=ADC_value){
+                            LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+                            LCDPrintString(value1);              // sends value to the LCD print function to display it on the LCD screen
+                            oldADVal=ADC_value;
+                        }
+                
+                }
+                AD1CON1bits.ADON = 0;
+                if (ADC_value < 90) {
+                    state = 1;
+                }
+                break;
+            case 4: //car off track
+                LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
+                LCDPrintString("State 4");
+                ADC_value = 0;
+                OC1RS = PR3*.667;
+                OC2RS = 0;
+                AD1CHS = 1;
+                AD1CON1bits.ADON = 1;
+                while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+                IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+                ADC_value = ADC1BUF0;
+                while (ADC_value>90) {
+                    while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+                    IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+                    ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+                    sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+                        if(oldADVal!=ADC_value){
+                            LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
+                            LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
+                            oldADVal=ADC_value;
+                        }
+                    
+                }
+                AD1CON1bits.ADON = 0;
+                if (ADC_value < 90) {
+                    state = 1;
+                }
+                break;
+            case 5:
+                ADC_right=0;
                 AD1CHS = 0;
                 AD1CON1bits.ADON = 1;
                 while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
@@ -180,6 +261,7 @@ int main(void) {
                      }
                 AD1CON1bits.ADON = 0;
                 AD1CHS = 4;
+                ADC_left = 0;
                 AD1CON1bits.ADON = 1;
                 while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
                 IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
@@ -191,72 +273,18 @@ int main(void) {
                      oldLeftVal=ADC_left;
                      }
                 AD1CON1bits.ADON = 0;
-                if ((ADC_right < 50) && (ADC_left > 65)) {
+                if ((ADC_right < 60) && (ADC_left > 50)) {
                     state = 3;
                 }
-                else if ((ADC_right > 50) && (ADC_left < 65)) {
+                else if ((ADC_right > 60) && (ADC_left < 50)) {
                     state =  4;
                 }
-                break;
-            //State 2: Drive backwards
-            case 2:
-                LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-                LCDPrintString("State 2");
-                AD1CHS = 1;         // input is center sensor
-                AD1CON1bits.ADON = 1;
-                ADC_value=ADC1BUF0;
-                if (ADC_value>100) {    //car off track
+                else if ((ADC_right > 60)&& (ADC_left > 50)) {
                     state = 3;
                 }
                 break;
-            case 3: //car off track
-                LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-                LCDPrintString("State 3");
-                OC1RS = 0;
-                OC2RS = PR3*.667;
-                AD1CHS = 0;
-                AD1CON1bits.ADON = 1;
-                while (ADC_right<60) {
-                    while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
-                    IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
-                    ADC_right = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
-                    sprintf(value1, "%6d", ADC_right); // formats value in ADC_value as a 6 character string and stores in in the value character array
-                        if(oldRightVal!=ADC_right){
-                            LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
-                            LCDPrintString(value1);              // sends value to the LCD print function to display it on the LCD screen
-                            oldRightVal=ADC_right;
-                        }
-                
-                }
-                AD1CON1bits.ADON = 0;
-                state = 1;
-                break;
-            case 4: //car off track
-                LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
-                LCDPrintString("State 4");
-                OC1RS = PR3*.667;
-                OC2RS = 0;
-                AD1CHS = 4;
-                AD1CON1bits.ADON = 1;
-                while (ADC_left<25) {
-                    while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
-                    IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
-                    ADC_left = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
-                    sprintf(value2, "%6d", ADC_left); // formats value in ADC_value as a 6 character string and stores in in the value character array
-                        if(oldLeftVal!=ADC_left){
-                            LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
-                            LCDPrintString(value2);              // sends value to the LCD print function to display it on the LCD screen
-                            oldLeftVal=ADC_left;
-                        }
-                    
-                }
-                AD1CON1bits.ADON = 0;
-                state = 1;
-                break;
-            case 5: // wait
-                state=5;
-                break;
         }
+
 
     }
 return 0;
@@ -271,5 +299,8 @@ void __attribute__((interrupt,auto_psv)) _CNInterrupt(void)
     IFS1bits.CNIF = 0;
     if(state == 0) {
         state = 1;
+    }
+    else {
+        state = 0;
     }
 }
