@@ -61,19 +61,17 @@ int main(void) {
     char last[3];
 
     /***************************/
-//    T1CONbits.TON = 0;  // Turn timer 1 off
-//    T1CONbits.TCS = 0; // sets up to use internal clock
-//    T1CONbits.TGATE = 0;
-//    IFS0bits.T1IF = 0;  // reset timer 1 interrupt flag
-//    TMR1 = 0;           // resets timer 1 to 0
-//
-//    T1CONbits.TCKPS = 01; // set a prescaler of 8 for timer 2
-//    PR1 = 0.8432;  // (1us)(14745600/8)-(1) = 0.8432
-//
-//    T1CONbits.TON = 1; // start timer 1
-//    while (IFS0bits.T1IF == 0); // delay until the timer finishes
-//
-//    T1CONbits.TON = 0; // Turn timer 1 off
+    T1CONbits.TON = 0;  // Turn timer 1 off
+    T1CONbits.TCS = 0; // sets up to use internal clock
+    T1CONbits.TGATE = 0;
+    IFS0bits.T1IF = 0;  // reset timer 1 interrupt flag
+    TMR1 = 0;           // resets timer 1 to 0
+
+    T1CONbits.TCKPS = 00; // set a prescaler of 8 for timer 2
+    PR1 = 15;  // (1us)(14745600/1)-(1) = 15
+    IEC0bits.T1IE=1;
+
+    T1CONbits.TON = 0; // Turn timer 1 off
 /*****************************************/
 
 
@@ -207,8 +205,16 @@ int main(void) {
                 if (ADC_value>60) {
                     state = 2;
                 }
+                if (ADC_value < 60) {
+                    lastOnTrack=2;
+                }
+                T1CONbits.TON = 1; // Turn timer 1 on
+                while (timerFlag!=0);
+                timerFlag=0;
+                T1CONbits.TON = 0; // Turn timer 1 off
 //                IFS0bits.T1IF = 0;
                 break;
+
             //State 1: Drive forward
             case 2:
                 LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
@@ -225,6 +231,10 @@ int main(void) {
                     if(ADC_right < 20){
                         lastOnTrack = 3;
                     }
+                T1CONbits.TON = 1; // Turn timer 1 on
+                while (timerFlag!=1);
+                timerFlag=0;
+                T1CONbits.TON = 0; // Turn timer 1 off
                 //IFS0bits.T1IF = 0;
                  // start added - cjh
 //                    if(ADC_right < 60 && ADC_left > 25){
@@ -246,7 +256,10 @@ int main(void) {
                     if(ADC_left <10){
                         lastOnTrack = 1;
                     }
-                IFS0bits.T1IF = 0;
+                T1CONbits.TON = 1; // Turn timer 1 on
+                while (timerFlag!=1);
+                timerFlag=0;
+                T1CONbits.TON = 0; // Turn timer 1 off
                 // start added - cjh
 //                    if(ADC_left < 25 && ADC_right > 60){
 //                        prevLeft = ADC_left;
@@ -281,24 +294,36 @@ int main(void) {
 
                 if ((ADC_right < 20) && (ADC_left > 10)) {
                     state = 4;
-//                    IFS0bits.T1IF = 0;
+                    T1CONbits.TON = 1; // Turn timer 1 on
+                    while (timerFlag!=1);
+                    timerFlag=0;
+                    T1CONbits.TON = 0; // Turn timer 1 off
                 }
 
                 else if ((ADC_right > 20) && (ADC_left < 10)) {
                     state =  5;
-//                    IFS0bits.T1IF = 0;
+                    T1CONbits.TON = 1; // Turn timer 1 on
+                    while (timerFlag!=1);
+                    timerFlag=0;
+                    T1CONbits.TON = 0; // Turn timer 1 off
                 }
 
                 // start added - cjh
                 else if ((ADC_right > 20) && (ADC_left > 10) && ADC_value > 60){
                     if( lastOnTrack == 3){
                         state = 4;
-//                        IFS0bits.T1IF = 0;
+                        T1CONbits.TON = 1; // Turn timer 1 on
+                        while (timerFlag!=1);
+                        timerFlag=0;
+                        T1CONbits.TON = 0; // Turn timer 1 off
                     }
 
                     if( lastOnTrack == 1){
                         state = 5;
-//                        IFS0bits.T1IF = 0;
+                        T1CONbits.TON = 1; // Turn timer 1 on
+                        while (timerFlag!=1);
+                        timerFlag=0;
+                        T1CONbits.TON = 0; // Turn timer 1 off
                     }
                 }
 
@@ -332,7 +357,10 @@ int main(void) {
                 ADC_value=ADC1BUF0;
                 if (ADC_value>60) {    //car off track
                     state = 3;
-//                    IFS0bits.T1IF = 0;
+                    T1CONbits.TON = 1; // Turn timer 1 on
+                    while (timerFlag!=1);
+                    timerFlag=0;
+                    T1CONbits.TON = 0; // Turn timer 1 off
                 }
                 break;
             case 4: //car off track
@@ -356,11 +384,17 @@ int main(void) {
                      }
                 if (ADC_right<20) {
                     state = 4;
-//                    IFS0bits.T1IF = 0;
+                    T1CONbits.TON = 1; // Turn timer 1 on
+                    while (timerFlag!=1);
+                    timerFlag=0;
+                    T1CONbits.TON = 0; // Turn timer 1 off
                 }
                 else {
                     state = 1;
-//                    IFS0bits.T1IF = 0;
+                    T1CONbits.TON = 1; // Turn timer 1 on
+                    while (timerFlag!=1);
+                    timerFlag=0;
+                    T1CONbits.TON = 0; // Turn timer 1 off
                 }
                 AD1CON1bits.ADON = 0;
                 break;
@@ -384,18 +418,24 @@ int main(void) {
                      }
                 if (ADC_left<10) {
                     state = 5;
-//                    IFS0bits.T1IF = 0;
+                    T1CONbits.TON = 1; // Turn timer 1 on
+                    while (timerFlag!=1);
+                    timerFlag=0;
+                    T1CONbits.TON = 0; // Turn timer 1 off
                 }
                 else {
                     state = 1;
-//                    IFS0bits.T1IF = 0;
+                    T1CONbits.TON = 1; // Turn timer 1 on
+                    while (timerFlag!=1);
+                    timerFlag=0;
+                    T1CONbits.TON = 0; // Turn timer 1 off
                 }
                 AD1CON1bits.ADON = 0;
                 break;
-            case 6: // wait
-                state=5;
+//            case 6: // wait
+//                state=5;
 //                IFS0bits.T1IF = 0;
-                break;
+//                break;
         }
 
     }
