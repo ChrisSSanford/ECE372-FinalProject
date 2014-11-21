@@ -130,40 +130,60 @@ int main(void) {
     while(1)
     {
         while (buttonPress==0);
+        AD1CON1bits.ADON = 1; // A/D operating mode set to A/D converter module is operating
         AD1CHS = 1;         // positive input is AN1
         AD1CON1bits.SAMP=1;
         while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
         IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
         ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
         AD1CON1bits.SAMP=0;
-
-        AD1CON1bits.SAMP=1;
+        AD1CON1bits.ADON = 0; // A/D operating mode set to A/D converter module is operating
+        
+        sprintf(value, "%6d", ADC_value);
+        LCDMoveCursor(1,0);
+        LCDPrintString(value);
+        
         AD1CHS = 0;         // positive input is AN0
+        AD1CON1bits.ADON = 1; // A/D operating mode set to A/D converter module is operating
+        AD1CON1bits.SAMP=1;
         while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
         IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
         ADC_right = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
         AD1CON1bits.SAMP=0;
-
-        AD1CON1bits.SAMP=1;
+        AD1CON1bits.ADON = 0; // A/D operating mode set to A/D converter module is operating
+        
         AD1CHS = 4;         // positive input is AN4
+        AD1CON1bits.ADON = 1; // A/D operating mode set to A/D converter module is operating
+        AD1CON1bits.SAMP=1;
         while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
         IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
         ADC_left = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
         AD1CON1bits.SAMP=0;
+        AD1CON1bits.ADON = 0; // A/D operating mode set to A/D converter module is operating
        
 
         if (ADC_value < 90) {
             LCDMoveCursor(0,0);
             LCDPrintString("Go Str8 ");
-            sprintf(value, "%6d", ADC_value);
-            LCDMoveCursor(1,0);
-            LCDPrintString(value);
-                OC1RS = PR3*.67;
-                OC2RS = PR3*.67;
+//            sprintf(value, "%6d", ADC_value);
+//            LCDMoveCursor(1,0);
+//            LCDPrintString(value);
+                OC1RS = PR3*.65;
+                OC2RS = PR3*.65;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
                 lastOnTrack=2;
         }
+        else if (ADC_right <50) {
+            LCDMoveCursor(0,0);
+            LCDPrintString("Go Right");
+                OC1RS = PR3*.65;
+                OC2RS = 0;
+                LATBbits.LATB10=1;
+                LATBbits.LATB11=0;
+                lastOnTrack=3;
+        }
+
         else if (ADC_left < 20 ) {
             LCDMoveCursor(0,0);
             LCDPrintString("Go Left ");
@@ -173,9 +193,20 @@ int main(void) {
                 LATBbits.LATB11=0;
                 lastOnTrack=1;
         }
-        else if (ADC_right <50) {
+        
+        else if (lastOnTrack==2) {
             LCDMoveCursor(0,0);
-            LCDPrintString("Go Right");
+            LCDPrintString("Go Right ");
+                OC1RS = PR3*.65;
+                OC2RS = 0;
+                LATBbits.LATB10=1;
+                LATBbits.LATB11=0;
+                lastOnTrack=2;
+        }
+
+        else if (lastOnTrack==3) {
+            LCDMoveCursor(0,0);
+            LCDPrintString("Go Right ");
                 OC1RS = PR3*.65;
                 OC2RS = 0;
                 LATBbits.LATB10=1;
@@ -190,24 +221,6 @@ int main(void) {
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
                 lastOnTrack=1;
-        }
-        else if (lastOnTrack==3) {
-            LCDMoveCursor(0,0);
-            LCDPrintString("Go Right ");
-                OC1RS = PR3*.65;
-                OC2RS = 0;
-                LATBbits.LATB10=1;
-                LATBbits.LATB11=0;
-                lastOnTrack=3;
-        }
-        else if (lastOnTrack==2) {
-            LCDMoveCursor(0,0);
-            LCDPrintString("Go Right ");
-                OC1RS = PR3*.65;
-                OC2RS = 0;
-                LATBbits.LATB10=1;
-                LATBbits.LATB11=0;
-                lastOnTrack=2;
         }
         else {
                 LATBbits.LATB10=0;
