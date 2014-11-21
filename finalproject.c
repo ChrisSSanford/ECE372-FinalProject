@@ -35,7 +35,7 @@ _CONFIG2( IESO_OFF & SOSCSEL_SOSC & WUTSEL_LEG & FNOSC_PRIPLL & FCKSM_CSDCMD & O
 
 volatile int state = 0;
 volatile int prevState=0;
-
+volatile int timerFlag = 0;
 // ******************************************************************************************* //
 
 
@@ -53,6 +53,28 @@ int main(void) {
     int oldRightVal=-1;
     int oldLeftVal=-1;
     int oldADVal=-1;
+
+    //-added cjh
+    int prevLeft = -1;
+    int prevRight = -1;
+    int lastOnTrack = 0;
+    char last[3];
+
+    /***************************/
+//    T1CONbits.TON = 0;  // Turn timer 1 off
+//    T1CONbits.TCS = 0; // sets up to use internal clock
+//    T1CONbits.TGATE = 0;
+//    IFS0bits.T1IF = 0;  // reset timer 1 interrupt flag
+//    TMR1 = 0;           // resets timer 1 to 0
+//
+//    T1CONbits.TCKPS = 01; // set a prescaler of 8 for timer 2
+//    PR1 = 0.8432;  // (1us)(14745600/8)-(1) = 0.8432
+//
+//    T1CONbits.TON = 1; // start timer 1
+//    while (IFS0bits.T1IF == 0); // delay until the timer finishes
+//
+//    T1CONbits.TON = 0; // Turn timer 1 off
+/*****************************************/
 
 
 /**********************************************/
@@ -131,7 +153,7 @@ int main(void) {
     AD1CON2 = 0x0;       // Always uses MUX A input multiplexer settings, configured as one 16-word buffer, interrupts at the completion of conversion for each sample/convert sequence, use the channel selected by the CH0SA bits as the MUX A input
     AD1CON3 = 0x0101;      //set the A/D conversion clock period to be 2*Tcy, set the Auto-Sample Time bits to be 1 T_AD, A/D conversion clock derived from system clock
     AD1CON1 = 0x20E4;   // A/D sample auto-start mode set for sampling begins immediately after last conversion completes, SAMP bit is automatically set, Conversion trigger source set to internal counter (auto-convert), data output format is integer, stop in idle mode set to discontinue module operation when device enters idle mode
-    AD1CHS = 4;         // positive input is AN5
+    AD1CHS = 4;         // positive input starts with middle sensor
     AD1CSSL = 0;        // low reference set to 0
 
     AD1CON1bits.ADON = 1; // A/D operating mode set to A/D converter module is operating
@@ -165,8 +187,8 @@ int main(void) {
             case 1:
 //                LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
 //                LCDPrintString("State 1");
-                OC1RS = PR3*.67;
-                OC2RS = PR3*.67;
+                OC1RS = PR3*.6;
+                OC2RS = PR3*.6;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
                 AD1CHS = 1;
@@ -185,20 +207,30 @@ int main(void) {
                 if (ADC_value>60) {
                     state = 2;
                 }
+//                IFS0bits.T1IF = 0;
                 break;
             //State 1: Drive forward
             case 2:
                 LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
                 LCDPrintString("State 2");
-                OC1RS = PR3*.67;
-                OC2RS = PR3*.67;
-                LATBbits.LATB10=0;
+                OC1RS = PR3*.5;
+                OC2RS = PR3*.5;
+                LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
                 AD1CHS = 0;
                 AD1CON1bits.ADON = 1;
                 while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
                 IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
                 ADC_right = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+                    if(ADC_right < 20){
+                        lastOnTrack = 3;
+                    }
+                //IFS0bits.T1IF = 0;
+                 // start added - cjh
+//                    if(ADC_right < 60 && ADC_left > 25){
+//                        prevRight = ADC_left;
+//                    }
+                // end added - cjh
                 sprintf(value1, "%6d", ADC_right); // formats value in ADC_value as a 6 character string and stores in in the value character array
                   if(oldRightVal!=ADC_right){
                      LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
@@ -211,6 +243,15 @@ int main(void) {
                 while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
                 IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
                 ADC_left = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+                    if(ADC_left <10){
+                        lastOnTrack = 1;
+                    }
+                IFS0bits.T1IF = 0;
+                // start added - cjh
+//                    if(ADC_left < 25 && ADC_right > 60){
+//                        prevLeft = ADC_left;
+//                    }
+                // end added - cjh
                 sprintf(value2, "%6d", ADC_left); // formats value in ADC_value as a 6 character string and stores in in the value character array
                   if(oldLeftVal!=ADC_left){
                      LCDMoveCursor(1,0);                 // moves the cursor on the LCD to the home position
@@ -218,15 +259,67 @@ int main(void) {
                      oldLeftVal=ADC_left;
                      }
                 AD1CON1bits.ADON = 0;
-                if ((ADC_right < 90) && (ADC_left > 45)) {
+
+                // start added - cjh
+
+                   // sample from center sensor
+
+                AD1CHS = 1;
+                AD1CON1bits.ADON = 1;
+                while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+                IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+                ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+                sprintf(value, "%6d", ADC_value); // formats value in ADC_value as a 6 character string and stores in in the value character array
+                  if(oldADVal!=ADC_value){
+                     LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
+                     LCDPrintString(value);              // sends value to the LCD print function to display it on the LCD screen
+                     oldADVal=ADC_value;
+                     }
+                AD1CON1bits.ADON = 0;
+
+                // end added - cjh
+
+                if ((ADC_right < 20) && (ADC_left > 10)) {
                     state = 4;
+//                    IFS0bits.T1IF = 0;
                 }
-                else if ((ADC_right > 90) && (ADC_left < 45)) {
+
+                else if ((ADC_right > 20) && (ADC_left < 10)) {
                     state =  5;
+//                    IFS0bits.T1IF = 0;
                 }
+
+                // start added - cjh
+                else if ((ADC_right > 20) && (ADC_left > 10) && ADC_value > 60){
+                    if( lastOnTrack == 3){
+                        state = 4;
+//                        IFS0bits.T1IF = 0;
+                    }
+
+                    if( lastOnTrack == 1){
+                        state = 5;
+//                        IFS0bits.T1IF = 0;
+                    }
+                }
+
+
+//                else if ((ADC_right > 60) && (ADC_left > 25) && ADC_value > 125){
+//                    if(prevLeft < 25){
+//                        state = 5;
+//                    }
+//
+//                    if(prevRight < 60){
+//                        state = 4;
+//                    }
+ //               }
+                // end added - cjh
                 else {
                     state = 1;
                 }
+//                LCDClear();
+//                sprintf(last, "%6d", lastOnTrack);
+//                LCDMoveCursor(0,0);
+//                LCDPrintString(last);
                 break;
             //State 2: Drive backwards
             case 3:
@@ -239,12 +332,13 @@ int main(void) {
                 ADC_value=ADC1BUF0;
                 if (ADC_value>60) {    //car off track
                     state = 3;
+//                    IFS0bits.T1IF = 0;
                 }
                 break;
             case 4: //car off track
                 LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
                 LCDPrintString("State 4");
-                OC1RS = PR3*.65;
+                OC1RS = PR3*.80;
                 OC2RS = 0;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
@@ -260,11 +354,13 @@ int main(void) {
                      LCDPrintString(value2);              // sends value to the LCD print function to display it on the LCD screen
                      oldRightVal=ADC_right;
                      }
-                if (ADC_right<90) {
+                if (ADC_right<20) {
                     state = 4;
+//                    IFS0bits.T1IF = 0;
                 }
                 else {
                     state = 1;
+//                    IFS0bits.T1IF = 0;
                 }
                 AD1CON1bits.ADON = 0;
                 break;
@@ -272,7 +368,7 @@ int main(void) {
                 LCDMoveCursor(0,0);                 // moves the cursor on the LCD to the home position
                 LCDPrintString("State 5");
                 OC1RS = 0;
-                OC2RS = PR3*.65;
+                OC2RS = PR3*.80;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
                 AD1CHS = 4;
@@ -286,16 +382,19 @@ int main(void) {
                      LCDPrintString(value1);              // sends value to the LCD print function to display it on the LCD screen
                      oldLeftVal=ADC_left;
                      }
-                if (ADC_left<45) {
+                if (ADC_left<10) {
                     state = 5;
+//                    IFS0bits.T1IF = 0;
                 }
                 else {
                     state = 1;
+//                    IFS0bits.T1IF = 0;
                 }
                 AD1CON1bits.ADON = 0;
                 break;
             case 6: // wait
                 state=5;
+//                IFS0bits.T1IF = 0;
                 break;
         }
 
@@ -313,4 +412,9 @@ void __attribute__((interrupt,auto_psv)) _CNInterrupt(void)
     if(state == 0) {
         state = 1;
     }
+}
+
+void __attribute__((interrupt,auto_psv)) _T1Interrupt(void){
+    IFS0bits.T1IF = 0;
+    timerFlag=1;
 }

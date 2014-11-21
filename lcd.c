@@ -64,6 +64,8 @@ void DelayUs(unsigned int usDelay) {
 
 /**********************************************/
     T2CONbits.TON = 0;  // Turn timer 2 off
+    T2CONbits.TCS = 0; // sets up to use internal clock
+    T2CONbits.TGATE = 0;
     IFS0bits.T2IF = 0;  // reset timer 2 interrupt flag
     TMR2 = 0;           // resets timer 2 to 0
 
