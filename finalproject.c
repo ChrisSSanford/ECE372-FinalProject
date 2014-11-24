@@ -35,6 +35,7 @@ _CONFIG2( IESO_OFF & SOSCSEL_SOSC & WUTSEL_LEG & FNOSC_PRIPLL & FCKSM_CSDCMD & O
 
 volatile int state = 0;
 volatile int buttonPress=0;
+volatile int timerFlag=0;
 
 // ******************************************************************************************* //
 
@@ -43,6 +44,26 @@ volatile int buttonPress=0;
  *
  */
 int main(void) {
+// ********************************Set Up Timer************************************ //
+// Setup Timer 1 to use internal clock (Fosc/2).
+	T1CONbits.TCS=0;
+	T1CONbits.TGATE = 0;
+
+// Setup Timer 1's prescaler to 1:256.
+	T1CONbits.TCKPS1 = 1;   //prescale of 256
+        T1CONbits.TCKPS0 = 1;
+
+// Set Timer 1 to be initially off.
+	T1CONbits.TON=0;
+
+// Clear Timer 1 value and reset interrupt flag
+	TMR1=0;
+
+	IFS0bits.T1IF=0;
+        IEC0bits.T1IE=1;
+
+// Set Timer 1's period value register to value for 5 ms.
+	PR1=287;  //for prescale of 256 need 287
 
  /**********************************************/
 
@@ -95,6 +116,10 @@ int main(void) {
     //sensor 3
     TRISAbits.TRISA0 = 1;
     AD1PCFGbits.PCFG0 = 0;
+    
+    //sensor 4-barcode reader
+    TRISBbits.TRISB3 = 1;
+    AD1PCFGbits.PCFG5 = 0;
 
 /*****************************************************/
     //determines which state the car is in
@@ -110,7 +135,17 @@ int main(void) {
     int ADC_value;      // variable to store the binary value in the ADC buffer
     int ADC_left;
     int ADC_right;
+    int ADC_reader;
     char value[8];
+    int startBit;
+    int whiteOne;
+    int whiteTwo;
+    int whiteThree;
+    int whiteFour;
+    int bitOne;
+    int bitTwo;
+    int bitThree;
+    int bitFour;
 
     int lastOnTrack = -1;
 
@@ -120,7 +155,7 @@ int main(void) {
     AD1CON2 = 0x0;       // Always uses MUX A input multiplexer settings, configured as one 16-word buffer, interrupts at the completion of conversion for each sample/convert sequence, use the channel selected by the CH0SA bits as the MUX A input
     AD1CON3 = 0x0101;      //set the A/D conversion clock period to be 2*Tcy, set the Auto-Sample Time bits to be 1 T_AD, A/D conversion clock derived from system clock
     AD1CON1 = 0x20E4;   // A/D sample auto-start mode set for sampling begins immediately after last conversion completes, SAMP bit is automatically set, Conversion trigger source set to internal counter (auto-convert), data output format is integer, stop in idle mode set to discontinue module operation when device enters idle mode
-    AD1CHS = 1;         // positive input is AN5
+    AD1CHS = 1;         // positive input is AN1
     AD1CSSL = 0;        // low reference set to 0
 
     AD1CON1bits.ADON = 1; // A/D operating mode set to A/D converter module is operating
@@ -138,10 +173,6 @@ int main(void) {
         ADC_value = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
         AD1CON1bits.SAMP=0;
         AD1CON1bits.ADON = 0; // A/D operating mode set to A/D converter module is operating
-        
-        sprintf(value, "%6d", ADC_value);
-        LCDMoveCursor(1,0);
-        LCDPrintString(value);
         
         AD1CHS = 0;         // positive input is AN0
         AD1CON1bits.ADON = 1; // A/D operating mode set to A/D converter module is operating
@@ -161,6 +192,15 @@ int main(void) {
         AD1CON1bits.SAMP=0;
         AD1CON1bits.ADON = 0; // A/D operating mode set to A/D converter module is operating
        
+        AD1CHS = 5;         // positive input is AN4
+        AD1CON1bits.ADON = 1; // A/D operating mode set to A/D converter module is operating
+        AD1CON1bits.SAMP=1;
+        while(!IFS0bits.AD1IF);  // wait while the A/D 1 interrupt flag is low
+        IFS0bits.AD1IF = 0;     // clear the A/D 1 interrupt flag
+        ADC_reader = ADC1BUF0;   // stores the current value in the A/D 1 buffer in the ADC_value variable
+        AD1CON1bits.SAMP=0;
+        AD1CON1bits.ADON = 0; // A/D operating mode set to A/D converter module is operating
+
 
         if (ADC_value < 90) {
             LCDMoveCursor(0,0);
@@ -168,65 +208,83 @@ int main(void) {
 //            sprintf(value, "%6d", ADC_value);
 //            LCDMoveCursor(1,0);
 //            LCDPrintString(value);
-                OC1RS = PR3*.65;
-                OC2RS = PR3*.65;
-                LATBbits.LATB10=1;
-                LATBbits.LATB11=0;
+//                OC1RS = PR3*.65;
+//                OC2RS = PR3*.65;
+//                LATBbits.LATB10=1;
+//                LATBbits.LATB11=0;
                 lastOnTrack=2;
         }
         else if (ADC_right <50) {
             LCDMoveCursor(0,0);
             LCDPrintString("Go Right");
-                OC1RS = PR3*.65;
-                OC2RS = 0;
-                LATBbits.LATB10=1;
-                LATBbits.LATB11=0;
+//                OC1RS = PR3*.65;
+//                OC2RS = 0;
+//                LATBbits.LATB10=1;
+//                LATBbits.LATB11=0;
                 lastOnTrack=3;
         }
 
         else if (ADC_left < 20 ) {
             LCDMoveCursor(0,0);
             LCDPrintString("Go Left ");
-                OC1RS = 0;
-                OC2RS = PR3*.65;
-                LATBbits.LATB10=1;
-                LATBbits.LATB11=0;
+//                OC1RS = 0;
+//                OC2RS = PR3*.65;
+//                LATBbits.LATB10=1;
+//                LATBbits.LATB11=0;
                 lastOnTrack=1;
         }
         
         else if (lastOnTrack==2) {
             LCDMoveCursor(0,0);
             LCDPrintString("Go Right ");
-                OC1RS = PR3*.65;
-                OC2RS = 0;
-                LATBbits.LATB10=1;
-                LATBbits.LATB11=0;
+//                OC1RS = PR3*.65;
+//                OC2RS = 0;
+//                LATBbits.LATB10=1;
+//                LATBbits.LATB11=0;
                 lastOnTrack=2;
         }
 
         else if (lastOnTrack==3) {
             LCDMoveCursor(0,0);
             LCDPrintString("Go Right ");
-                OC1RS = PR3*.65;
-                OC2RS = 0;
-                LATBbits.LATB10=1;
-                LATBbits.LATB11=0;
+//                OC1RS = PR3*.65;
+//                OC2RS = 0;
+//                LATBbits.LATB10=1;
+//                LATBbits.LATB11=0;
                 lastOnTrack=3;
         }
         else if (lastOnTrack==1) {
             LCDMoveCursor(0,0);
             LCDPrintString("Go Left ");
-                OC1RS = 0;
-                OC2RS = PR3*.65;
-                LATBbits.LATB10=1;
-                LATBbits.LATB11=0;
+//                OC1RS = 0;
+//                OC2RS = PR3*.65;
+//                LATBbits.LATB10=1;
+//                LATBbits.LATB11=0;
                 lastOnTrack=1;
         }
         else {
                 LATBbits.LATB10=0;
                 LATBbits.LATB11=0;
         }
-        
+        if (startBit==0) {
+            sprintf(value, "%4d", ADC_reader);
+            LCDMoveCursor(0,0);
+            LCDPrintString(value);
+            if (ADC_reader < 18) {
+            startBit=1;
+            sprintf(value, "%d", startBit);
+            LCDMoveCursor(1,0);
+            LCDPrintString(value);
+            }
+        }
+        if ((startBit==1)&&(whiteOne==0)){
+           if (ADC_reader > 60) {
+            whiteOne=1;
+            sprintf(value, "%d", whiteOne);
+            LCDMoveCursor(1,1);
+            LCDPrintString(value);
+            }
+        }
     }
 }
 
