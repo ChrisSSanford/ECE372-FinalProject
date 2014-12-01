@@ -152,6 +152,7 @@ int main(void) {
             LCDMoveCursor(0,0);
             LCDPrintString("Play");
             SBReset();
+            SBUnmute();
             SBPlayVoice(1);
             playing = 1;
         }

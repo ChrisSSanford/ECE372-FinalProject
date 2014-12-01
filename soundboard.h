@@ -20,7 +20,9 @@ void SBReset();
 void SBPlayVoice(int voiceNumber);
 void SBAsyncPlayVoice(int voiceNumber);
 void SBStopVoice();
-void SBPauseVoise();
+void SBPauseVoice();
+void SBMute();
+void SBUnmute();
 void SBSendCommand(unsigned int command);
 
 // ******************************************************************************************* //

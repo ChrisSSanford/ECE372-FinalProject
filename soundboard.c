@@ -33,6 +33,8 @@
 // ******************************************************************************************* //
 volatile unsigned int PLAY_PAUSE = 0xFFFE;
 volatile unsigned int STOP = 0xFFFF;
+volatile unsigned int VOLUME_MIN = 0xFFF0;
+volatile unsigned int VOLUME_MAX = 0xFFF7;
 // ******************************************************************************************* //
 void Delayms(unsigned int msDelay) {
 
@@ -90,8 +92,16 @@ void SBStopVoice(){
   SBSendCommand(STOP);
 }
 //**************************************************************************** //
-void SBPauseVoise() {
+void SBPauseVoice() {
   SBSendCommand(PLAY_PAUSE);
+}
+
+void SBMute(){
+  SBSendCommand(VOLUME_MIN);
+}
+
+void SBUnmute(){
+  SBSendCommand(VOLUME_MAX);
 }
 
 //**************************************************************************** //
