@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include "lcd.h"
 #include <stdlib.h>
+#include "soundboard.h"
 
 _CONFIG1( JTAGEN_OFF & GCP_OFF & GWRP_OFF &
           BKBUG_ON & COE_ON & ICS_PGx1 &
@@ -36,6 +37,7 @@ _CONFIG2( IESO_OFF & SOSCSEL_SOSC & WUTSEL_LEG & FNOSC_PRIPLL & FCKSM_CSDCMD & O
 volatile int state = 0;
 volatile int buttonPress=0;
 volatile int timerFlag=0;
+volatile int playing = 0;
 
 // ******************************************************************************************* //
 
@@ -44,26 +46,6 @@ volatile int timerFlag=0;
  *
  */
 int main(void) {
-// ********************************Set Up Timer************************************ //
-// Setup Timer 1 to use internal clock (Fosc/2).
-	T1CONbits.TCS=0;
-	T1CONbits.TGATE = 0;
-
-// Setup Timer 1's prescaler to 1:256.
-	T1CONbits.TCKPS1 = 1;   //prescale of 256
-        T1CONbits.TCKPS0 = 1;
-
-// Set Timer 1 to be initially off.
-	T1CONbits.TON=0;
-
-// Clear Timer 1 value and reset interrupt flag
-	TMR1=0;
-
-	IFS0bits.T1IF=0;
-        IEC0bits.T1IE=1;
-
-// Set Timer 1's period value register to value for 5 ms.
-	PR1=287;  //for prescale of 256 need 287
 
  /**********************************************/
 
@@ -150,7 +132,7 @@ int main(void) {
     int lastOnTrack = -1;
 
     LCDInitialize();  // initialize the LCD display
-
+    SBInitialize();
     //AD1PCFG &= 0xFFDF; // Pin 7, AN5, where the POT is connected, IO6, is set to analog mode, AD module samples pin voltage
     AD1CON2 = 0x0;       // Always uses MUX A input multiplexer settings, configured as one 16-word buffer, interrupts at the completion of conversion for each sample/convert sequence, use the channel selected by the CH0SA bits as the MUX A input
     AD1CON3 = 0x0101;      //set the A/D conversion clock period to be 2*Tcy, set the Auto-Sample Time bits to be 1 T_AD, A/D conversion clock derived from system clock
@@ -164,7 +146,15 @@ int main(void) {
 
     while(1)
     {
+
         while (buttonPress==0);
+        if (playing ==0) {
+            LCDMoveCursor(0,0);
+            LCDPrintString("Play");
+            SBReset();
+            SBPlayVoice(1);
+            playing = 1;
+        }
         AD1CON1bits.ADON = 1; // A/D operating mode set to A/D converter module is operating
         AD1CHS = 1;         // positive input is AN1
         AD1CON1bits.SAMP=1;
@@ -287,6 +277,7 @@ int main(void) {
         }
     }
 }
+
 
 void __attribute__((interrupt,auto_psv)) _CNInterrupt(void)
 {
