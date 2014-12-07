@@ -17,7 +17,8 @@
 
 // ******************************************************************************************* //
 // ******************************************************************************************* //
-
+#ifndef LCD_H
+#define LCD_H
 void LCDInitialize(void);
 void LCDClear(void);
 void LCDMoveCursor(unsigned char x, unsigned char y);
@@ -29,3 +30,4 @@ void LCDPrintString(const char* s);
 //for testing other LCD instructions
 void WriteLCD(unsigned char word, unsigned commandType, unsigned usDelay);
 void DelayUs(unsigned int usDelay);
+#endif

@@ -1,4 +1,3 @@
-//Lab2
 /**************************************************************************************************/
 
 /*
@@ -69,15 +68,13 @@ void DelayUs(unsigned int usDelay) {
     IFS0bits.T2IF = 0;  // reset timer 2 interrupt flag
     TMR2 = 0;           // resets timer 2 to 0
 
-    T2CONbits.TCKPS = 01; // set a prescaler of 8 for timer 2
-    PR2 =(unsigned int) (2*usDelay);  // (1us)(14745600/8)-(1) = 0.8432
+    T2CONbits.TCKPS = 00; // set a prescaler of 8 for timer 2
+    PR2 =(unsigned int) (14*usDelay);  // (1us)(14745600/1)-(1) = 13.7456
 
     T2CONbits.TON = 1; // start timer 2
     while (IFS0bits.T2IF == 0); // delay until the timer finishes
-
+    IFS0bits.T2IF = 0;
     T2CONbits.TON = 0; // Turn timer 2 off
-
-
 
 /*****************************************************/
 }
