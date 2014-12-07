@@ -180,7 +180,14 @@ int main(void) {
 
     while(1)
     {
+        
        while (buttonPress==0);
+//        while (buttonPress==0){
+//            ScanSensors();
+//            sprintf(value, "%6d", ADC_reader);
+//            LCDMoveCursor(1,0);
+//            LCDPrintString(value);
+//        }
        ScanSensors();
        
         sprintf(value, "%4d", ADC_reader);
@@ -255,7 +262,8 @@ int main(void) {
             sprintf(value, "%4d", ADC_reader);
             LCDMoveCursor(0,0);
             LCDPrintString(value);
-            if (ADC_reader < 38) {
+            //if (ADC_reader < 38) {
+            if (ADC_reader <18) {
             startBit=1;
             lastRead=0;
             }
@@ -272,7 +280,8 @@ int main(void) {
               numPrinted=0;
           }
         }
-        if ((startBit == 1) && (ADC_reader <38)) {
+        //if ((startBit == 1) && (ADC_reader <38)) {
+        if ((startBit == 1) && (ADC_reader <18)) {
             if (lastRead==2) {
                 LCDMoveCursor(1,numPrinted);
                 LCDPrintChar('0');
@@ -286,7 +295,8 @@ int main(void) {
                 lastRead=0;
             }
         }
-        if ((startBit == 1) && (ADC_reader<60) && (ADC_reader>38) ) {
+        //if ((startBit == 1) && (ADC_reader<60) && (ADC_reader>38) ) {
+        if ((startBit == 1) && (ADC_reader<60) && (ADC_reader>18) ) {
             if (lastRead==2) {
                 LCDMoveCursor(1,numPrinted);
                 LCDPrintChar('1');
