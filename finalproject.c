@@ -44,6 +44,7 @@ volatile int ADC_right;
 volatile int ADC_reader;
 
 // ******************************************************************************************* //
+
 void ScanSensors(){
     //Sensor (inputs)
     //sensor1
@@ -114,17 +115,18 @@ void ScanSensors(){
  *
  */
 int main(void) {
-        long i=0;
+    long i=0;
     SBInitialize();  // initialize the LCD display
     SBReset();
     SBPauseVoice();
         for(i=0;i<5000;++i){
             Delayms(1);
         }
-    SBAsyncPlayVoice(0);
-    for(i=0;i<10000;++i){
+    SBPlayVoice(1);
+    for(i=0;i<5000;++i){
             Delayms(1);
         }
+        
  /**********************************************/
 
     //use timer for PWM (Motor Control)
@@ -175,7 +177,7 @@ int main(void) {
         IFS1bits.CNIF = 0;
         IEC1bits.CNIE = 1;
 /*****************************************************/
-
+    T3CONbits.TON = 1;  // Turn timer 3 on - VVVEEERRRYYY important for comparisons
     
     char value[8];
     int startBit=-1;
@@ -183,20 +185,28 @@ int main(void) {
     int numPrinted = 0;
     int lastOnTrack = -1;
     int lastRead = -1;
+    
+    
+    SBInitialize();  // initialize the LCD display
+    SBReset();
+    SBPauseVoice();
+        for(i=0;i<5000;++i){
+            Delayms(1);
+        }
+    SBPlayVoice(1);
+        for(i=0;i<5000;++i){
+            Delayms(1);
+        }
+
 
     LCDInitialize();  // initialize the LCD display
     //AD1PCFG &= 0xFFDF; // Pin 7, AN5, where the POT is connected, IO6, is set to analog mode, AD module samples pin voltage
-
-    T3CONbits.TON = 1;  // Turn timer 3 on - VVVEEERRRYYY important for comparisons
 
     while(1)
     {
         
        while (buttonPress==0);
-//       if (playing == 0){
-//        SBAsyncPlayVoice(0);
-//        playing=1;
-//       }
+
 //        while (buttonPress==0){
 //            ScanSensors();
 //            sprintf(value, "%6d", ADC_reader);
@@ -204,7 +214,7 @@ int main(void) {
 //            LCDPrintString(value);
 //        }
        ScanSensors();
-       
+
         sprintf(value, "%4d", ADC_reader);
         LCDMoveCursor(0,0);
         LCDPrintString(value);
@@ -274,9 +284,9 @@ int main(void) {
                 LATBbits.LATB11=0;
         }
         if (startBit==-1) {
-            sprintf(value, "%4d", ADC_reader);
-            LCDMoveCursor(0,0);
-            LCDPrintString(value);
+//            sprintf(value, "%4d", ADC_reader);
+//            LCDMoveCursor(0,0);
+//            LCDPrintString(value);
             //if (ADC_reader < 38) {
             if (ADC_reader <18) {
             startBit=1;
@@ -293,6 +303,7 @@ int main(void) {
           if (numPrinted==4) {
               startBit=-1;
               numPrinted=0;
+              Delayms(100);
           }
         }
         //if ((startBit == 1) && (ADC_reader <38)) {
