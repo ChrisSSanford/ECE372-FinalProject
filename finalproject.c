@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include "lcd.h"
 #include <stdlib.h>
+#include "soundboard.h"
 
 _CONFIG1( JTAGEN_OFF & GCP_OFF & GWRP_OFF &
           BKBUG_ON & COE_ON & ICS_PGx1 &
@@ -113,7 +114,17 @@ void ScanSensors(){
  *
  */
 int main(void) {
-
+        long i=0;
+    SBInitialize();  // initialize the LCD display
+    SBReset();
+    SBPauseVoice();
+        for(i=0;i<5000;++i){
+            Delayms(1);
+        }
+    SBAsyncPlayVoice(0);
+    for(i=0;i<10000;++i){
+            Delayms(1);
+        }
  /**********************************************/
 
     //use timer for PWM (Motor Control)
@@ -182,6 +193,10 @@ int main(void) {
     {
         
        while (buttonPress==0);
+//       if (playing == 0){
+//        SBAsyncPlayVoice(0);
+//        playing=1;
+//       }
 //        while (buttonPress==0){
 //            ScanSensors();
 //            sprintf(value, "%6d", ADC_reader);

@@ -26,3 +26,4 @@ void SBUnmute();
 void SBSendCommand(unsigned int command);
 
 // ******************************************************************************************* //
+void Delayms(unsigned int msDelay);

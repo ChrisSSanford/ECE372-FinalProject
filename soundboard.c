@@ -1,7 +1,7 @@
 /**************************************************************************************************/
 
 /*
- * File: lcd.c
+ * File: soundboard.c
  * Team: Lambda^3
  * Members: Chris Houseman
  *          Randy Martinez
@@ -19,7 +19,7 @@
 
 #include "p24fj64ga002.h"
 #include "soundboard.h"
-#include "lcd.h"
+#include "lcd.h"    //NEED4FP
 // ******************************************************************************************* //
 #define SB_RESET  LATBbits.LATB4        //soundboard pin 1 is connected to starter board pin 11
 #define SB_CLOCK  LATAbits.LATA4        //soundboard pin 7 is connected to starter board pin 12
@@ -30,6 +30,16 @@
 #define SB_TRIS_CLOCK  TRISAbits.TRISA4
 #define SB_TRIS_DATA   TRISBbits.TRISB8
 #define SB_TRIS_BUSY   TRISBbits.TRISB9
+// ******************************************************************************************* //
+//#define SB_RESET  LATBbits.LATB15        //soundboard pin 1 is connected to starter board pin 11
+//#define SB_CLOCK  LATBbits.LATB14        //soundboard pin 7 is connected to starter board pin 12
+//#define SB_DATA   LATBbits.LATB12        //soundboard pin 10 is connected to starter board pin 17
+//#define SB_BUSY   LATBbits.LATB13        //soundboard pin 15 is connected to starter board pin 18
+//
+//#define SB_TRIS_RESET  TRISBbits.TRISB15
+//#define SB_TRIS_CLOCK  TRISBbits.TRISB14
+//#define SB_TRIS_DATA   TRISBbits.TRISB12
+//#define SB_TRIS_BUSY   TRISBbits.TRISB13
 // ******************************************************************************************* //
 volatile unsigned int PLAY_PAUSE = 0xFFFE;
 volatile unsigned int STOP = 0xFFFF;
@@ -55,16 +65,16 @@ void Delayms(unsigned int msDelay) {
 
 /*****************************************************/
 }
-
 void SBInitialize(void) {
      SB_TRIS_RESET = 0;	// Reset is output
      SB_TRIS_CLOCK = 0;	// Clock is output
      SB_TRIS_DATA  = 0;	// Data is output
      SB_TRIS_BUSY  = 1;	// Busy is input
 
-     SB_BUSY=1;
-     LCDMoveCursor(0,0);
-     LCDPrintString("Send Com");
+     SB_CLOCK=1;
+     SB_DATA=1;
+     SB_RESET=1;
+
 }
 //**************************************************************************** //
 void SBReset(){
@@ -106,26 +116,30 @@ void SBUnmute(){
 
 //**************************************************************************** //
 void SBSendCommand(unsigned int command){
-    LCDMoveCursor(0,0);
-    LCDPrintString("Send Com");
     unsigned int mask = 0x8000;
+    int i = 0;
     SB_CLOCK=0;
-    DelayUs(2);
-    for (mask=0x8000; mask > 0; mask >>=1) {
+    Delayms(2);
+    for (i=16; i > 0; --i) {
         SB_CLOCK=0;
-        DelayUs(50);
-        if (command & mask) {
+        DelayUs(100);
+        if ((command & mask)==0x8000) {
             SB_DATA=1;
         }
         else {
             SB_DATA=0;
         }
-        DelayUs(50);
-        SB_CLOCK=1;
+        command <<= 1;
         DelayUs(100);
-        if (mask>0x0001) {
-            Delayms(2);
-        }
+        //DelayUs(200);
+        SB_CLOCK=1;
+        DelayUs(200);
+        //DelayUs(200);
+//        if (mask>0x0001) {
+//            Delayms(2);
+//        }
     }
+    SB_CLOCK=1;
+    SB_DATA=1;
     Delayms(20);
 }
