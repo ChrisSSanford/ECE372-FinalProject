@@ -42,6 +42,7 @@ volatile int ADC_value;      // variable to store the binary value in the ADC bu
 volatile int ADC_left;
 volatile int ADC_right;
 volatile int ADC_reader;
+volatile int count = 0;
 
 // ******************************************************************************************* //
 void ScanSensors(){
@@ -114,14 +115,14 @@ void ScanSensors(){
  *
  */
 int main(void) {
-       long i=0;
+    long i=0;
     SBInitialize();  // initialize the LCD display
     SBReset();
     SBPauseVoice();
         for(i=0;i<5000;++i){
             Delayms(1);
         }
-    SBPlayVoice(2);
+    SBPlayVoice(0);
     for(i=0;i<10000;++i){
             Delayms(1);
         }
@@ -136,7 +137,13 @@ int main(void) {
 
     T3CONbits.TCKPS = 3; // set a prescaler of 8 for timer 2
     PR3 = 575;
-
+/*****************************************************/
+        PR1 = 575;
+	TMR4 = 0;
+	IFS1bits.T4IF = 0;
+	IEC1bits.T4IE = 1;
+	T4CONbits.TCKPS = 3;
+	T4CONbits.TON = 0;
 
 /*****************************************************/
 
@@ -194,21 +201,18 @@ int main(void) {
     {
 
        while (buttonPress==0);
-
-       ScanSensors();
-
         sprintf(value, "%4d", ADC_reader);
         LCDMoveCursor(0,0);
         LCDPrintString(value);
-
+        ScanSensors();
         if (ADC_value < 200) {
 //            LCDMoveCursor(0,0);
 //            LCDPrintString("Go Str8 ");
 //            sprintf(value, "%6d", ADC_value);
 //            LCDMoveCursor(1,0);
 //            LCDPrintString(value);
-                OC1RS = PR3*.55;
-                OC2RS = PR3*.55;
+                OC1RS = PR3*.6;
+                OC2RS = PR3*.6;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
                 lastOnTrack=2;
@@ -216,7 +220,7 @@ int main(void) {
         else if (ADC_right <70) {
 //            LCDMoveCursor(0,0);
 //            LCDPrintString("Go Right");
-                OC1RS = PR3*.55;
+                OC1RS = PR3*.6;
                 OC2RS = 0;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
@@ -227,7 +231,7 @@ int main(void) {
 //            LCDMoveCursor(0,0);
 //            LCDPrintString("Go Left ");
                 OC1RS = 0;
-                OC2RS = PR3*.55;
+                OC2RS = PR3*.6;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
                 lastOnTrack=1;
@@ -236,7 +240,7 @@ int main(void) {
         else if (lastOnTrack==2) {
 //            LCDMoveCursor(0,0);
 //            LCDPrintString("Go Right ");
-                OC1RS = PR3*.55;
+                OC1RS = PR3*.6;
                 OC2RS = 0;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
@@ -246,7 +250,7 @@ int main(void) {
         else if (lastOnTrack==3) {
 //            LCDMoveCursor(0,0);
 //            LCDPrintString("Go Right ");
-                OC1RS = PR3*.55;
+                OC1RS = PR3*.6;
                 OC2RS = 0;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
@@ -256,7 +260,7 @@ int main(void) {
 //            LCDMoveCursor(0,0);
 //            LCDPrintString("Go Left ");
                 OC1RS = 0;
-                OC2RS = PR3*.55;
+                OC2RS = PR3*.6;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
                 lastOnTrack=1;
@@ -265,17 +269,17 @@ int main(void) {
                 LATBbits.LATB10=0;
                 LATBbits.LATB11=0;
         }
+        
         if (startBit==-1) {
-            sprintf(value, "%4d", ADC_reader);
-            LCDMoveCursor(0,0);
-            LCDPrintString(value);
-            if (ADC_reader < 38) {
-            //if (ADC_reader <18) {
+
+            //if (ADC_reader < 20) {
+            if (ADC_reader <18) {
             startBit=1;
             lastRead=0;
+            T4CONbits.TON=1;
             }
         }
-        if ((startBit==1)&&(ADC_reader>110)){
+        if ((startBit==1)&&(ADC_reader>70)){
           if (lastRead == 0){
             lastRead=2;
           }
@@ -285,13 +289,14 @@ int main(void) {
           if (numPrinted==4) {
               startBit=-1;
               numPrinted=0;
-              Delayms(10);
+              T4CONbits.TON=0;
+              count = 0;
               LATBbits.LATB10=0;
               LATBbits.LATB11=0;
           }
         }
-        if ((startBit == 1) && (ADC_reader <38)) {
-        //if ((startBit == 1) && (ADC_reader <18)) {
+        //if ((startBit == 1) && (ADC_reader <20)) {
+        if ((startBit == 1) && (ADC_reader <18)) {
             if (lastRead==2) {
                 LCDMoveCursor(1,numPrinted);
                 LCDPrintChar('0');
@@ -305,8 +310,8 @@ int main(void) {
                 lastRead=0;
             }
         }
-        if ((startBit == 1) && (ADC_reader<100) && (ADC_reader>38) ) {
-        //if ((startBit == 1) && (ADC_reader<60) && (ADC_reader>18) ) {
+        //if ((startBit == 1) && (ADC_reader<70) && (ADC_reader>20) ) {
+        if ((startBit == 1) && (ADC_reader<60) && (ADC_reader>18) ) {
             if (lastRead==2) {
                 LCDMoveCursor(1,numPrinted);
                 LCDPrintChar('1');
@@ -314,9 +319,18 @@ int main(void) {
                 lastRead=1;
             }
         }
+        if ((count==100) && (numPrinted==0)) {
+            T4CONbits.TON=0;
+            count = 0;
+            startBit=-1;
+        }
     }
 }
-
+//
+void __attribute__((interrupt,auto_psv)) _T4Interrupt(void){
+    IFS1bits.T4IF = 0;
+    count=count+1;
+}
 
 void __attribute__((interrupt,auto_psv)) _CNInterrupt(void)
 {
