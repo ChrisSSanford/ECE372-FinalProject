@@ -51,10 +51,7 @@ void ScanSensors(){
     TRISBbits.TRISB2 = 1;
     AD1PCFGbits.PCFG4 = 0;
 
-    //sensor 2
-    TRISAbits.TRISA1 = 1;
-    AD1PCFGbits.PCFG1 = 0;
-
+    
     //sensor 3
     TRISAbits.TRISA0 = 1;
     AD1PCFGbits.PCFG0 = 0;
@@ -63,10 +60,15 @@ void ScanSensors(){
     TRISBbits.TRISB3 = 1;
     AD1PCFGbits.PCFG5 = 0;
 
+    //sensor 2
+    TRISAbits.TRISA1 = 1;
+    AD1PCFGbits.PCFG1 = 0;
+
+
     //ADCON REGISTER SetUP
-    AD1CON2 = 0x0;       // Always uses MUX A input multiplexer settings, configured as one 16-word buffer, interrupts at the completion of conversion for each sample/convert sequence, use the channel selected by the CH0SA bits as the MUX A input
-    AD1CON3 = 0x0101;      //set the A/D conversion clock period to be 2*Tcy, set the Auto-Sample Time bits to be 1 T_AD, A/D conversion clock derived from system clock
-    AD1CON1 = 0x20E4;   // A/D sample auto-start mode set for sampling begins immediately after last conversion completes, SAMP bit is automatically set, Conversion trigger source set to internal counter (auto-convert), data output format is integer, stop in idle mode set to discontinue module operation when device enters idle mode
+    AD1CON2 = 0x0;
+    AD1CON3 = 0x0101;    
+    AD1CON1 = 0x20E4;   
     AD1CHS = 1;         // positive input is AN1
     AD1CSSL = 0;        // low reference set to 0
 
@@ -138,7 +140,7 @@ int main(void) {
     T3CONbits.TCKPS = 3; // set a prescaler of 8 for timer 2
     PR3 = 575;
 /*****************************************************/
-        PR1 = 575;
+        PR4 = 575;
 	TMR4 = 0;
 	IFS1bits.T4IF = 0;
 	IEC1bits.T4IE = 1;
@@ -199,20 +201,22 @@ int main(void) {
 
     while(1)
     {
-
+//        while (buttonPress==0) {
+//            ScanSensors();
+//            sprintf(value, "%6d", ADC_right);
+//            LCDMoveCursor(0,0);
+//            LCDPrintString(value);
+//        }
        while (buttonPress==0);
-        sprintf(value, "%4d", ADC_reader);
-        LCDMoveCursor(0,0);
-        LCDPrintString(value);
         ScanSensors();
-        if (ADC_value < 200) {
+        if (ADC_value < 175) {
 //            LCDMoveCursor(0,0);
 //            LCDPrintString("Go Str8 ");
 //            sprintf(value, "%6d", ADC_value);
 //            LCDMoveCursor(1,0);
 //            LCDPrintString(value);
-                OC1RS = PR3*.6;
-                OC2RS = PR3*.6;
+                OC1RS = PR3;
+                OC2RS = PR3;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
                 lastOnTrack=2;
@@ -220,7 +224,7 @@ int main(void) {
         else if (ADC_right <70) {
 //            LCDMoveCursor(0,0);
 //            LCDPrintString("Go Right");
-                OC1RS = PR3*.6;
+                OC1RS = PR3;
                 OC2RS = 0;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
@@ -231,7 +235,7 @@ int main(void) {
 //            LCDMoveCursor(0,0);
 //            LCDPrintString("Go Left ");
                 OC1RS = 0;
-                OC2RS = PR3*.6;
+                OC2RS = PR3;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
                 lastOnTrack=1;
@@ -240,7 +244,7 @@ int main(void) {
         else if (lastOnTrack==2) {
 //            LCDMoveCursor(0,0);
 //            LCDPrintString("Go Right ");
-                OC1RS = PR3*.6;
+                OC1RS = PR3;
                 OC2RS = 0;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
@@ -250,7 +254,7 @@ int main(void) {
         else if (lastOnTrack==3) {
 //            LCDMoveCursor(0,0);
 //            LCDPrintString("Go Right ");
-                OC1RS = PR3*.6;
+                OC1RS = PR3;
                 OC2RS = 0;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
@@ -260,7 +264,7 @@ int main(void) {
 //            LCDMoveCursor(0,0);
 //            LCDPrintString("Go Left ");
                 OC1RS = 0;
-                OC2RS = PR3*.6;
+                OC2RS = PR3;
                 LATBbits.LATB10=1;
                 LATBbits.LATB11=0;
                 lastOnTrack=1;
@@ -276,6 +280,7 @@ int main(void) {
             if (ADC_reader <18) {
             startBit=1;
             lastRead=0;
+            TMR4=0;
             T4CONbits.TON=1;
             }
         }
@@ -319,10 +324,12 @@ int main(void) {
                 lastRead=1;
             }
         }
-        if ((count==100) && (numPrinted==0)) {
+        if ((startBit==1) && (count==300) && (numPrinted<4)) {
             T4CONbits.TON=0;
             count = 0;
             startBit=-1;
+            LCDClear();
+            numPrinted=0;
         }
     }
 }
